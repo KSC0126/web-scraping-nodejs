@@ -1,10 +1,13 @@
 const puppeteerExtra = require('puppeteer-extra');
 const pluginStealth = require('puppeteer-extra-plugin-stealth');
+import express from 'express';
 
-async function run() {
-    console.log('inside puppeteer function');
+const zillowScrapApp = express();
+
+
+zillowScrapApp.get('/', async (request, response) => {
     puppeteerExtra.use(pluginStealth());
-    const browser = await puppeteerExtra.launch({ headless: false, defaultViewport: false });
+    const browser = await puppeteerExtra.launch({ headless: true, defaultViewport: false });
     const page = await browser.newPage();
 
     const url = 'https://www.zillow.com/homes/Plano,-TX_rb/';
@@ -12,7 +15,6 @@ async function run() {
     await page.goto(url);
 
     const housesList = await page.$$(`[data-test="property-card"]`);
-    // await page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
     let housesListArray = [];
     for (const house of housesList) {
         const price = await page.evaluate((el: HTMLElement) => el.querySelector(`[data-test="property-card-price"]`)?.textContent, house);
@@ -29,10 +31,10 @@ async function run() {
     }
 
     await browser.close();
-    console.log('housesListArray', housesListArray)
-    return housesListArray;
+    response.send(housesListArray)
+    
+});
 
-}
 function formatHouseDetails(details: string) {
     return {
         bedRooms: details.split(' ')[0],
@@ -41,5 +43,6 @@ function formatHouseDetails(details: string) {
     }
 }
 
-// Run the function
-run();
+const port = process.env.PORT || 3000;
+
+zillowScrapApp.listen(port, () => console.log(`App listening on PORT ${port}`))
